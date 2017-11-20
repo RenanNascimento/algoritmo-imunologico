@@ -6,6 +6,7 @@ import copy
 import math
 import matplotlib.pyplot as plt
 
+from mpl_toolkits.mplot3d import Axes3D
 from anticorpo import Anticorpo
 
 
@@ -123,34 +124,11 @@ class SelecaoClonal:
             self.clones.append(clones_mutados)
 
     '''
-    ' Retorna mínimo, média e máximo
+    ' Definicao da funcao eggholder sem modificacoes
     '''
 
-    def retornaMedidas(self):
-        total_aptidao = 0
-        minimo = self.populacao[0].aptidao
-        maximo = self.populacao[0].aptidao
-        for ant in self.populacao:
-            total_aptidao += ant.aptidao
-            if ant.aptidao < minimo:
-                minimo = ant.aptidao
-            elif ant.aptidao > maximo:
-                maximo = ant.aptidao
-        return minimo, total_aptidao / self.tam_populacao, maximo
-
-    '''
-    ' Gera o gráfico Erro x Iteração
-    '''
-
-    def gerarGrafico(self, tempo, minimo, media, maximo):
-        plt.plot(tempo, minimo, label='Mínimo')
-        plt.plot(tempo, media, label='Média')
-        plt.plot(tempo, maximo, label='Máximo')
-        plt.ylabel('Aptidão')
-        plt.xlabel('Iteração')
-        plt.title('Gráfico Aptidão x Iteração')
-        plt.legend()
-        plt.show()
+    def eggholder(self, x, y):
+        return(-(y + 47) * np.sin(np.sqrt(np.abs(y + x / 2 + 47))) - x * np.sin(np.sqrt(np.abs(x - (y + 47)))))
 
     '''
     ' Melhores anticorpos daquela populacao
@@ -163,6 +141,33 @@ class SelecaoClonal:
         print('Melhores anticorpos:')
         for ant in melhores[:n_melhores]:
             print(str(ant.alelos) + '\t=\t' + str(ant.aptidao - self.OFFSET))
+        return melhores[0]
+
+    '''
+    ' Gera uma curva de nível com os anticorpos
+    '''
+
+    def gerarGrafico(self, imgID, title):
+        amostras = 200
+        fig = plt.figure(figsize=(10, 7))
+        x = np.linspace(self.inicio, self.fim, amostras)
+        y = x
+        X, Y = np.meshgrid(x, y)
+        Z = self.eggholder(X, Y)
+        plt.figure(1)
+        plt.contour(X, Y, Z)
+        alelo1 = [i.alelos[0] for i in self.populacao[1:]]
+        alelo2 = [i.alelos[1] for i in self.populacao[1:]]
+        popOrdenada = sorted(self.populacao, reverse=True,
+                             key=lambda Anticorpo: Anticorpo.aptidao)
+        melhorAlelo1 = popOrdenada[0].alelos[0]
+        melhorAlelo2 = popOrdenada[0].alelos[1]
+        plt.plot(melhorAlelo1, melhorAlelo2, marker='o', color='red')
+        plt.scatter(alelo1, alelo2, color='blue')
+        plt.title(title)
+        plt.show()
+        print('O melhor indivíduo desta população está na cor vermelha')
+        print('\n\n--------------------------------------------------------')
 
     '''
     ' Executa algoritmo imunologico
@@ -170,23 +175,16 @@ class SelecaoClonal:
 
     def executar(self):
         self.popular()
-        # Inicaliza os vetores de tempo e erro com o estado inicial
-        mini, med, maxi = self.retornaMedidas()
-        tempo = [0]
-        minimo = [mini]
-        media = [med]
-        maximo = [maxi]
+        self.gerarGrafico(
+            1, 'População inicial distribuída nas curvas de nível da função eggholder')
         t = 1
         # Executa o algoritmo até atinger o máximo de iteraçẽos
         while t <= self.max_it:
             self.clonagem()
             self.selecao()
-            mini, med, maxi = self.retornaMedidas()
-            tempo.append(t)
-            minimo.append(mini)
-            media.append(med)
-            maximo.append(maxi)
             t += 1
+
         # Gera o gráfico de saída
-        self.gerarGrafico(tempo, minimo, media, maximo)
+        self.gerarGrafico(
+            2, 'População final distribuída nas curvas de nível da função eggholder')
         self.melhoresAnticorpos()
